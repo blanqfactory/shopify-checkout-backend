@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk T-Shirt Order & PayU Checkout</title>
+</head>
+<body>
+
+    <!-- Aapka website ka content -->
+    <div style="padding: 20px; font-family: sans-serif; max-width: 500px; margin: auto;">
+        <h2>Custom T-Shirt Bulk Order</h2>
+        
+        <!-- Customer Details Inputs -->
+        <div style="margin-bottom: 15px;">
+            <label>Name:</label><br>
+            <input type="text" id="cust-name" value="Abhigyan Yadav" style="width: 100%; padding: 8px; margin-top: 5px;" />
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Phone:</label><br>
+            <input type="text" id="cust-phone" value="9876543210" style="width: 100%; padding: 8px; margin-top: 5px;" />
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Email:</label><br>
+            <input type="email" id="cust-email" value="test@example.com" style="width: 100%; padding: 8px; margin-top: 5px;" />
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label>Total Amount (₹):</label><br>
+            <span id="matrix-total-price" style="font-size: 20px; font-weight: bold; color: green;">1726.20</span>
+        </div>
+
+        <!-- Payment Button -->
+        <button onclick="triggerPayUCheckout()" style="width: 100%; padding: 12px; background: #0070f3; color: white; border: none; cursor: pointer; font-size: 16px; border-radius: 5px;">
+            Pay Now with PayU
+        </button>
+    </div>
+
+    <!-- Hidden PayU Form jo redirect karega -->
+    <form action="https://secure.payu.in/_payment" method="POST" id="payuForm" style="display:none;">
+        <input type="hidden" name="key" id="payu-key" />
+        <input type="hidden" name="txnid" id="txnid" />
+        <input type="hidden" name="amount" id="payu-amount" />
+        <input type="hidden" name="productinfo" value="Bulk T-Shirt Order" />
+        <input type="hidden" name="firstname" id="payu-firstname" />
+        <input type="hidden" name="email" id="payu-email" />
+        <input type="hidden" name="phone" id="payu-phone" />
+        <input type="hidden" name="surl" value="https://blanqfactory.com/success.html" />
+        <input type="hidden" name="furl" value="https://blanqfactory.com/failure.html" />
+        <input type="hidden" name="hash" id="payu-hash" />
+    </form>
+
+    <script>
+        window.triggerPayUCheckout = async function() {
+            let name = document.getElementById('cust-name').value;
+            let phone = document.getElementById('cust-phone').value;
+            let email = document.getElementById('cust-email').value;
+            let amount = document.getElementById('matrix-total-price').innerText.replace('₹', '').replace(/,/g, '').trim();
+            let txnid = 'TIX' + new Date().getTime();
+
+            try {
+                // Vercel backend API ko call karke hash mangwana
+                let response = await fetch('/api/payu-hash', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        txnid: txnid,
+                        amount: amount,
+                        productinfo: 'Bulk T-Shirt Order',
+                        firstname: name,
+                        email: email,
+                        phone: phone
+                    })
+                });
+
+                let data = await response.json();
+
+                if(data.hash) {
+                    // Form fields mein data bharna
+                    document.getElementById('payu-key').value = data.key;
+                    document.getElementById('txnid').value = data.txnid;
+                    document.getElementById('payu-amount').value = amount;
+                    document.getElementById('payu-firstname').value = name;
+                    document.getElementById('payu-phone').value = phone;
+                    document.getElementById('payu-email').value = email;
+                    document.getElementById('payu-hash').value = data.hash;
+
+                    // PayU gateway par submit kar dena
+                    document.getElementById('payuForm').submit();
+                } else {
+                    alert('Hash generation failed!');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Payment server error. Dobara koshish karein.');
+            }
+        };
+    </script>
+</body>
+</html>
